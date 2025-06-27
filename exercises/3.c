@@ -5,10 +5,6 @@ const char* DEFAULT_FILE = "index.html";
 char *to_path(char *req) {
     char *start, *end;
 
-    if (strlen(req) < 35) {
-        return 0;
-    }
-
     // Advance `start` to the first space
     for (start = req; start[0] != ' '; start++) {
         if (!start[0]) {
@@ -39,6 +35,10 @@ char *to_path(char *req) {
         end++;
     }
 
+    if (end + strlen(DEFAULT_FILE) > req + strlen(req)) {
+        return NULL;
+    }
+
     memcpy(
         end,
         DEFAULT_FILE,
@@ -51,6 +51,7 @@ char *to_path(char *req) {
 
 int main() {
     char req4[] = "GET /blog ";
+    printf("\nShould be \"(null)\": \"%s\"", to_path(req4));
     char req1[] = "GET /blog HTTP/1.1\nHost: example.com";
     printf("\nShould be \"blog/index.html\": \"%s\"\n", to_path(req1));
 
@@ -60,6 +61,5 @@ int main() {
     char req3[] = "GET / HTTP/1.1\nHost: example.com";
     printf("Should be \"index.html\": \"%s\"\n", to_path(req3));
 
-    printf("Should be \"(null)\": \"%s\"\n", to_path(req4));
     return 0;
 }
