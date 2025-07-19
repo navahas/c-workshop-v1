@@ -3,11 +3,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <stdlib.h>
 
-// 👉 First, build and run the program.
-//
-// To do this, make sure you're in the `exercises` directory, and then run:
-//
 // gcc -o app4 4.c && ./app4
 
 const char* DEFAULT_FILE = "index.html";
@@ -52,27 +49,41 @@ char *to_path(char *req) {
 
 void print_file(const char *path) {
     int fd = open(path, O_RDONLY);
-    struct stat metadata;
-    fstat(fd, &metadata);
+    if (fd == -1) {
+        return;
+    }
 
-    // 👉 Change this to `char *` and malloc(). (malloc comes from <stdlib.h>)
-    //    Hint 1: Don't forget to handle the case where malloc returns NULL!
-    //    Hint 2: Don't forget to `free(buf)` later, to prevent memory leaks.
-    char buf[metadata.st_size + 1];
+    struct stat metadata;
+    if (fstat(fd, &metadata) == -1) {
+        close(fd);
+        return;
+    }
+
+    /*char buf[metadata.st_size + 1];*/
+    char *buf = malloc(metadata.st_size + 1);
+    if (buf == NULL) {
+        close(fd);
+        return;
+    }
 
     ssize_t bytes_read = read(fd, buf, metadata.st_size);
+    if (bytes_read == -1) {
+        close(fd);
+        free(buf);
+        return;
+    }
+
     buf[bytes_read] = '\0';
     printf("\n%s contents:\n\n%s\n", path, buf);
 
+    free(buf);
     close(fd);
 
-    // 👉 Go back and add error handling for all the cases above where errors could happen.
-    //    (You can just printf that an error happened.) Some relevant docs:
-    //
-    //    https://www.man7.org/linux/man-pages/man2/open.2.html
-    //    https://www.man7.org/linux/man-pages/man2/stat.2.html
-    //    https://www.man7.org/linux/man-pages/man2/read.2.html
-    //    https://www.man7.org/linux/man-pages/man3/malloc.3.html
+    // Go back and add error handling for all the cases above where errors could happen.
+    //  https://www.man7.org/linux/man-pages/man2/open.2.html
+    //  https://www.man7.org/linux/man-pages/man2/stat.2.html
+    //  https://www.man7.org/linux/man-pages/man2/read.2.html
+    //  https://www.man7.org/linux/man-pages/man3/malloc.3.html
 }
 
 int main() {
@@ -81,7 +92,6 @@ int main() {
 
     char req2[] = "GET /blog HTTP/1.1\nHost: example.com";
     print_file(to_path(req2));
-
 
     return 0;
 }
