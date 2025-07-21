@@ -13,10 +13,6 @@
 #include <stdbool.h>
 #include <errno.h>
 
-// 👉 First, build and run the program.
-//
-// To do this, make sure you're in the `exercises` directory, and then run:
-//
 // gcc -o app5 5.c && ./app5
 
 const int PORT = 8080;
@@ -62,31 +58,31 @@ char *to_path(char *req) {
     return start + 1; // Skip the leading '/' (e.g. in "/blog/index.html")
 }
 
+const char *ERR_400 = "HTTP/1.1 400 Bad Request\n\n";
+const char *ERR_404 = "HTTP/1.1 404 Not Found\n\n";
+const char *ERR_413 = "HTTP/1.1 413 Content Too Large\n\n";
+const char *ERR_500 = "HTTP/1.1 500 Internal Server Error\n\n";
+
+void write_err(int socket_fd, const char *err_content) {
+    write(socket_fd, err_content, strlen(err_content));
+}
+
 int handle_req(char *request, int socket_fd) {
     char *path = to_path(request);
 
     if (path == NULL) {
-        // 👉 Change this to send an the actual response to the socket.
-        printf("HTTP/1.1 400 Bad Request\n\n");
+        /*printf("HTTP/1.1 400 Bad Request\n\n");*/
+        write_err(socket_fd, ERR_400);
         return -1;
     }
 
     int fd = open(path, O_RDONLY);
 
     if (fd == -1) {
-        // 👉 Change this to send an the actual response to the socket.
         if (errno == ENOENT) {
-            // This one is easy to try out in a browser: visit something like
-            // http://localhost:8080/foo (which doesn't exist, so it will 404.)
-            //
-            // Is the output in your terminal different from what you expected?
-            // If so, you can get a clue to what's happening if you run this in a
-            // different terminal window, while watching the output of your C program:
-            //
-            // wget http://localhost:8080/foo
-            printf("HTTP/1.1 404 Not Found\n\n");
+            write_err(socket_fd, ERR_404);
         } else {
-            printf("HTTP/1.1 500 Internal Server Error\n\n");
+            write_err(socket_fd, ERR_500);
         }
 
         return -1;
@@ -97,8 +93,7 @@ int handle_req(char *request, int socket_fd) {
     // Populate the `stats` struct with the file's metadata
     // If it fails (even though the file was open), respond with a 500 error.
     if (fstat(fd, &stats) == -1) {
-        // 👉 Change this to send an the actual response to the socket.
-        printf("HTTP/1.1 500 Internal Server Error\n\n");
+        write_err(socket_fd, ERR_500);
     }
 
     // Write the header to the socket ("HTTP/1.1 200 OK")
@@ -111,8 +106,7 @@ int handle_req(char *request, int socket_fd) {
             bytes_written = write(socket_fd, OK + bytes_written, bytes_to_write);
 
             if (bytes_written == -1) {
-                // 👉 Change this to send an the actual response to the socket.
-                printf("HTTP/1.1 500 Internal Server Error\n\n");
+                write_err(socket_fd, ERR_500);
                 return -1;
             }
 
@@ -135,8 +129,7 @@ int handle_req(char *request, int socket_fd) {
                 ssize_t result = write(socket_fd, buffer + bytes_written, bytes_remaining);
 
                 if (result == -1) {
-                    // 👉 Change this to send an the actual response to the socket.
-                    printf("HTTP/1.1 500 Internal Server Error\n\n");
+                    write_err(socket_fd, ERR_500);
                     return -1;
                 }
 
@@ -146,8 +139,7 @@ int handle_req(char *request, int socket_fd) {
         }
 
         if (bytes_read == -1) {
-            // 👉 Change this to send an the actual response to the socket.
-            printf("HTTP/1.1 500 Internal Server Error\n\n");
+            write_err(socket_fd, ERR_500);
             return -1;
         }
     }
@@ -209,9 +201,7 @@ int main() {
                 handle_req(req, req_socket_fd);
             } else {
                 // The request was larger than the maximum size we support!
-
-                // 👉 Change this to send an the actual response to the socket.
-                printf("HTTP/1.1 413 Content Too Large\n\n");
+                write_err(req_socket_fd, ERR_413);
             }
 
             close(req_socket_fd);
