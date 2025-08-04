@@ -63,8 +63,8 @@ const char *ERR_404 = "HTTP/1.1 404 Not Found\n\n";
 const char *ERR_413 = "HTTP/1.1 413 Content Too Large\n\n";
 const char *ERR_500 = "HTTP/1.1 500 Internal Server Error\n\n";
 
-void write_err(int socket_fd, const char *err_content) {
-    write(socket_fd, err_content, strlen(err_content));
+ssize_t write_err(int socket_fd, const char *err_content) {
+    return write(socket_fd, err_content, strlen(err_content));
 }
 
 int handle_req(char *request, int socket_fd) {
@@ -94,6 +94,7 @@ int handle_req(char *request, int socket_fd) {
     // If it fails (even though the file was open), respond with a 500 error.
     if (fstat(fd, &stats) == -1) {
         write_err(socket_fd, ERR_500);
+        return -1;
     }
 
     // Write the header to the socket ("HTTP/1.1 200 OK")
